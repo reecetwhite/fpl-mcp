@@ -1,6 +1,6 @@
 from mcp.server.fastmcp import FastMCP
 
-from cache import Element, FPLCache
+from cache import Element, FPLCache, Team
 
 mcp = FastMCP("fpl-mcp")
 cache = FPLCache()
@@ -48,6 +48,49 @@ async def refresh_cache() -> str:
     await cache.refresh(force=True)
     players, teams = cache.stats()
     return f"Cache refreshed: {players} players, {teams} teams"
+
+
+def format_team(t: Team) -> str:
+    return (
+        f"{t['name']} ({t['short_name']}) | strength: {t['strength']} | "
+        f"home: {t['strength_overall_home']} atk:{t['strength_attack_home']} def:{t['strength_defence_home']} | "
+        f"away: {t['strength_overall_away']} atk:{t['strength_attack_away']} def:{t['strength_defence_away']}"
+    )
+
+
+@mcp.tool()
+async def get_team(team_id: int) -> str:
+    """Get FPL team info by ID."""
+    await cache.ensure_loaded()
+    team = cache.get_team(team_id)
+    if not team:
+        return f"Team {team_id} not found"
+    return format_team(team)
+
+
+@mcp.tool()
+async def search_team(name: str) -> str:
+    """Search FPL teams by name (partial match)."""
+    await cache.ensure_loaded()
+    results = cache.search_teams(name)
+    if not results:
+        return f"No teams found matching '{name}'"
+    lines = [f"Found {len(results)} team(s):"]
+    for t in results:
+        lines.append(format_team(t))
+    return "\n".join(lines)
+
+
+@mcp.tool()
+async def get_all_teams() -> str:
+    """Get all Premier League teams sorted by strength."""
+    await cache.ensure_loaded()
+    teams = cache.get_all_teams()
+    teams_sorted = sorted(teams, key=lambda t: t["strength"], reverse=True)
+    lines = ["All 20 Premier League teams (sorted by strength):"]
+    for t in teams_sorted:
+        lines.append(format_team(t))
+    return "\n".join(lines)
 
 
 def main():

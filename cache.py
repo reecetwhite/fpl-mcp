@@ -25,6 +25,13 @@ class Team(TypedDict):
     id: int
     name: str
     short_name: str
+    strength: int
+    strength_overall_home: int
+    strength_overall_away: int
+    strength_attack_home: int
+    strength_attack_away: int
+    strength_defence_home: int
+    strength_defence_away: int
 
 
 class Event(TypedDict):
@@ -145,6 +152,17 @@ class FPLCache:
     def get_team_name(self, team_id: int) -> str:
         team = self._teams_by_id.get(team_id)
         return team["short_name"] if team else "Unknown"
+
+    def search_teams(self, query: str) -> list[Team]:
+        query = query.lower()
+        results: list[Team] = []
+        for name, team in self._teams_by_name.items():
+            if query in name and team not in results:
+                results.append(team)
+        return results
+
+    def get_all_teams(self) -> list[Team]:
+        return list(self._teams_by_id.values())
 
     def get_position_name(self, element_type: int) -> str:
         positions = {1: "GKP", 2: "DEF", 3: "MID", 4: "FWD"}
