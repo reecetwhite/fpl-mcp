@@ -52,3 +52,7 @@ async def refresh_cache() -> str:
 
 def main():
     mcp.run()
+
+
+if __name__ == "__main__":
+    main()
