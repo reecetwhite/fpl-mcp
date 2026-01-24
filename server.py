@@ -7,13 +7,14 @@ cache = FPLCache()
 
 
 def format_player(p: Element) -> str:
-    team = cache.get_team_name(p["team"])
+    team = cache.get_team(p["team"])
+    team_name = team["short_name"] if team else "Unknown"
     pos = cache.get_position_name(p["element_type"])
     price = p["now_cost"] / 10
     pts = p["total_points"]
     form = p["form"]
     selected = p["selected_by_percent"]
-    return f"{p['web_name']} ({team} {pos}) £{price}m | {pts}pts | form:{form} | {selected}%"
+    return f"{p['web_name']} ({team_name} {pos}) £{price}m | {pts}pts | form:{form} | {selected}%"
 
 
 @mcp.tool()

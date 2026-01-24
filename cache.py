@@ -126,6 +126,8 @@ class FPLCache:
         if self._is_stale():
             await self.refresh()
 
+    # ── Elements ─────────────────────────────────────────────────────────
+
     def get_element(self, player_id: int) -> Element | None:
         return self._elements_by_id.get(player_id)
 
@@ -146,12 +148,10 @@ class FPLCache:
 
         return results
 
+    # ── Teams ────────────────────────────────────────────────────────────
+
     def get_team(self, team_id: int) -> Team | None:
         return self._teams_by_id.get(team_id)
-
-    def get_team_name(self, team_id: int) -> str:
-        team = self._teams_by_id.get(team_id)
-        return team["short_name"] if team else "Unknown"
 
     def search_teams(self, query: str) -> list[Team]:
         query = query.lower()
@@ -163,6 +163,8 @@ class FPLCache:
 
     def get_all_teams(self) -> list[Team]:
         return list(self._teams_by_id.values())
+
+    # ── Utilities ────────────────────────────────────────────────────────
 
     def get_position_name(self, element_type: int) -> str:
         positions = {1: "GKP", 2: "DEF", 3: "MID", 4: "FWD"}
