@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "MCP server for Fantasy Premier League API"
 requires-python = ">=3.10"
 dependencies = [
-    "mcp[cli]",
+    "fastmcp<3",
     "httpx",
 ]
 

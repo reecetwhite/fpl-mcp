@@ -1,4 +1,4 @@
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
 
 from cache import Element, FPLCache, Team
 
@@ -15,6 +15,17 @@ def format_player(p: Element) -> str:
     form = p["form"]
     selected = p["selected_by_percent"]
     return f"{p['web_name']} ({team_name} {pos}) £{price}m | {pts}pts | form:{form} | {selected}%"
+
+
+def format_team(t: Team) -> str:
+    return (
+        f"{t['name']} ({t['short_name']}) | strength: {t['strength']} | "
+        f"home: {t['strength_overall_home']} atk:{t['strength_attack_home']} def:{t['strength_defence_home']} | "
+        f"away: {t['strength_overall_away']} atk:{t['strength_attack_away']} def:{t['strength_defence_away']}"
+    )
+
+
+# ── Player Tools ─────────────────────────────────────────────────────────
 
 
 @mcp.tool()
@@ -43,20 +54,7 @@ async def search_player(name: str) -> str:
     return "\n".join(lines)
 
 
-@mcp.tool()
-async def refresh_cache() -> str:
-    """Force refresh the FPL data cache."""
-    await cache.refresh(force=True)
-    players, teams = cache.stats()
-    return f"Cache refreshed: {players} players, {teams} teams"
-
-
-def format_team(t: Team) -> str:
-    return (
-        f"{t['name']} ({t['short_name']}) | strength: {t['strength']} | "
-        f"home: {t['strength_overall_home']} atk:{t['strength_attack_home']} def:{t['strength_defence_home']} | "
-        f"away: {t['strength_overall_away']} atk:{t['strength_attack_away']} def:{t['strength_defence_away']}"
-    )
+# ── Team Tools ───────────────────────────────────────────────────────────
 
 
 @mcp.tool()
@@ -92,6 +90,17 @@ async def get_all_teams() -> str:
     for t in teams_sorted:
         lines.append(format_team(t))
     return "\n".join(lines)
+
+
+# ── Utility ──────────────────────────────────────────────────────────────
+
+
+@mcp.tool()
+async def refresh_cache() -> str:
+    """Force refresh the FPL data cache."""
+    await cache.refresh(force=True)
+    players, teams = cache.stats()
+    return f"Cache refreshed: {players} players, {teams} teams"
 
 
 def main():
