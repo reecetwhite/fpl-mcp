@@ -1,6 +1,6 @@
 from fastmcp import FastMCP
 
-from cache import Element, FPLCache, Team
+from cache import Element, Fixture, FPLCache, Team
 
 mcp = FastMCP("fpl-mcp")
 cache = FPLCache()
@@ -23,6 +23,48 @@ def format_team(t: Team) -> str:
         f"home: {t['strength_overall_home']} atk:{t['strength_attack_home']} def:{t['strength_defence_home']} | "
         f"away: {t['strength_overall_away']} atk:{t['strength_attack_away']} def:{t['strength_defence_away']}"
     )
+
+
+def format_fixture(fix: Fixture, team_perspective: int | None = None) -> str:
+    """Format fixture. If team_perspective given, show opponent with H/A and FDR."""
+    home = cache.get_team(fix["team_h"])
+    away = cache.get_team(fix["team_a"])
+    home_name = home["short_name"] if home else "???"
+    away_name = away["short_name"] if away else "???"
+
+    event = fix.get("event")
+    gw = f"GW{event}" if event else "TBD"
+
+    kickoff = fix.get("kickoff_time")
+    if kickoff:
+        # Parse ISO format and format nicely
+        dt = kickoff.replace("T", " ")[:16]  # "2024-01-25 15:00"
+    else:
+        dt = "TBD"
+
+    if fix["finished"] and fix["team_h_score"] is not None:
+        score = f"{fix['team_h_score']}-{fix['team_a_score']}"
+    else:
+        score = None
+
+    if team_perspective:
+        if team_perspective == fix["team_h"]:
+            opp = away_name
+            venue = "H"
+            fdr = fix["team_h_difficulty"]
+        else:
+            opp = home_name
+            venue = "A"
+            fdr = fix["team_a_difficulty"]
+
+        if score:
+            return f"{gw}: {opp} ({venue}) FDR:{fdr} | {score} | {dt}"
+        return f"{gw}: {opp} ({venue}) FDR:{fdr} | {dt}"
+
+    # Neutral format
+    if score:
+        return f"{gw}: {home_name} {score} {away_name} | {dt}"
+    return f"{gw}: {home_name} vs {away_name} | {dt}"
 
 
 # ── Player Tools ─────────────────────────────────────────────────────────
@@ -92,6 +134,112 @@ async def get_all_teams() -> str:
     return "\n".join(lines)
 
 
+# ── Fixture Tools ────────────────────────────────────────────────────────
+
+
+@mcp.tool()
+async def get_gameweek_fixtures(gameweek: int) -> str:
+    """Get all fixtures for a specific gameweek."""
+    await cache.ensure_loaded()
+
+    fixtures = cache.get_fixtures_by_event(gameweek)
+    if not fixtures:
+        return f"No fixtures found for GW{gameweek}"
+
+    # Sort by kickoff time
+    fixtures_sorted = sorted(fixtures, key=lambda f: f.get("kickoff_time") or "")
+    lines = [f"GW{gameweek} fixtures ({len(fixtures)} matches):"]
+    for fix in fixtures_sorted:
+        lines.append(format_fixture(fix))
+    return "\n".join(lines)
+
+
+@mcp.tool()
+async def get_team_fixtures(team: str, gameweek: int | None = None) -> str:
+    """Get fixtures for a team, optionally filtered by gameweek."""
+    await cache.ensure_loaded()
+
+    teams = cache.search_teams(team)
+    if not teams:
+        return f"Team '{team}' not found"
+    t = teams[0]
+
+    fixtures = cache.get_fixtures_by_team(t["id"])
+    if gameweek:
+        fixtures = [f for f in fixtures if f.get("event") == gameweek]
+
+    if not fixtures:
+        return f"No fixtures found for {t['name']}"
+
+    # Sort by event then kickoff
+    fixtures_sorted = sorted(fixtures, key=lambda f: (f.get("event") or 99, f.get("kickoff_time") or ""))
+    gw_filter = f" (GW{gameweek})" if gameweek else ""
+    lines = [f"{t['name']} fixtures{gw_filter}:"]
+    for fix in fixtures_sorted:
+        lines.append(format_fixture(fix, team_perspective=t["id"]))
+    return "\n".join(lines)
+
+
+@mcp.tool()
+async def get_team_upcoming(team: str, limit: int = 5) -> str:
+    """Get next N upcoming fixtures for a team with FDR ratings."""
+    await cache.ensure_loaded()
+
+    teams = cache.search_teams(team)
+    if not teams:
+        return f"Team '{team}' not found"
+    t = teams[0]
+
+    current_gw = cache.get_current_gameweek()
+    if not current_gw:
+        return "Could not determine current gameweek"
+
+    fixtures = cache.get_fixtures_by_team(t["id"])
+    # Filter to current GW onwards and not finished
+    upcoming = [f for f in fixtures if (ev := f.get("event")) is not None and ev >= current_gw and not f["finished"]]
+    upcoming_sorted = sorted(upcoming, key=lambda f: (f.get("event") or 99, f.get("kickoff_time") or ""))[:limit]
+
+    if not upcoming_sorted:
+        return f"No upcoming fixtures found for {t['name']}"
+
+    lines = [f"{t['name']} next {len(upcoming_sorted)} fixtures:"]
+    for fix in upcoming_sorted:
+        lines.append(format_fixture(fix, team_perspective=t["id"]))
+    return "\n".join(lines)
+
+
+@mcp.tool()
+async def get_next_gameweeks(count: int = 5) -> str:
+    """Get summary of upcoming gameweeks with all fixtures."""
+    await cache.ensure_loaded()
+
+    current_gw = cache.get_current_gameweek()
+    if not current_gw:
+        return "Could not determine current gameweek"
+
+    lines: list[str] = []
+    for gw in range(current_gw, current_gw + count):
+        event = cache.get_event(gw)
+        if not event:
+            continue
+
+        fixtures = cache.get_fixtures_by_event(gw)
+        fixtures_sorted = sorted(fixtures, key=lambda f: f.get("kickoff_time") or "")
+
+        deadline = event.get("deadline_time", "")
+        if deadline:
+            deadline = deadline.replace("T", " ")[:16]
+
+        lines.append(f"\n## GW{gw} (deadline: {deadline})")
+        for fix in fixtures_sorted:
+            lines.append(format_fixture(fix))
+
+    if not lines:
+        return "No upcoming gameweeks found"
+
+    return "\n".join(lines)
+
+
 # ── Utility ──────────────────────────────────────────────────────────────
 
 
@@ -99,8 +247,9 @@ async def get_all_teams() -> str:
 async def refresh_cache() -> str:
     """Force refresh the FPL data cache."""
     await cache.refresh(force=True)
-    players, teams = cache.stats()
-    return f"Cache refreshed: {players} players, {teams} teams"
+    await cache.refresh_fixtures(force=True)
+    players, teams, fixtures = cache.stats()
+    return f"Cache refreshed: {players} players, {teams} teams, {fixtures} fixtures"
 
 
 def main():
