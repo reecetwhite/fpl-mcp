@@ -236,6 +236,9 @@ class FPLCache:
 
         return results
 
+    def get_all_elements(self) -> list[Element]:
+        return list(self._elements_by_id.values())
+
     # ── Teams ────────────────────────────────────────────────────────────
 
     def get_team(self, team_id: int) -> Team | None:
