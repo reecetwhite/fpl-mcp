@@ -20,6 +20,28 @@ class Element(TypedDict):
     total_points: int
     form: str
     selected_by_percent: str
+    # Core performance
+    minutes: int
+    starts: int
+    goals_scored: int
+    assists: int
+    bonus: int
+    yellow_cards: int
+    red_cards: int
+    # Defensive
+    clean_sheets: int
+    goals_conceded: int
+    saves: int
+    # xG stats
+    expected_goals: str
+    expected_assists: str
+    # Availability
+    status: str
+    chance_of_playing_next_round: int | None
+    news: str
+    # Efficiency
+    points_per_game: str
+    defensive_contribution_per_90: str
 
 
 class Team(TypedDict):
