@@ -1,3 +1,10 @@
+# Show project info
+info:
+    @echo "fpl-mcp: MCP server for Fantasy Premier League API"
+    @echo ""
+    @echo "Python: $(.venv/bin/python --version 2>/dev/null || echo 'venv not created')"
+    @echo "FastMCP: $(.venv/bin/pip show fastmcp 2>/dev/null | grep Version | cut -d' ' -f2 || echo 'not installed')"
+
 # Create venv
 create-venv:
     python -m venv .venv
