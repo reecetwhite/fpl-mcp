@@ -2,7 +2,7 @@ from collections.abc import Callable
 
 from fastmcp import FastMCP
 
-from .cache import Element, FPLCache, fetch_me, fetch_my_team
+from .cache import Element, FPLCache, fetch_my_team, resolve_manager_id
 from .formatter import format_fixture, format_my_team, format_player, format_team
 
 mcp = FastMCP("fpl-mcp")
@@ -287,14 +287,16 @@ async def get_all_teams() -> str:
 
 @mcp.tool()
 async def get_my_team(manager_id: int | None = None) -> str:
-    """Get manager's current team (requires FPL_API_TOKEN env var).
+    """Get manager's current team.
 
     Args:
-        manager_id: Manager ID. Defaults to authenticated user's entry.
+        manager_id: Manager ID. Defaults to FPL_MANAGER_ID env var,
+                    then authenticated user's entry via FPL_API_TOKEN.
     """
     await cache.ensure_loaded()
-    mid = manager_id or await fetch_me()
-    data = await fetch_my_team(mid)
+    mid = await resolve_manager_id(manager_id)
+    current_gw = cache.get_current_gameweek()
+    data = await fetch_my_team(mid, current_gw)
     return format_my_team(data, cache)
 
 

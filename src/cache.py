@@ -133,6 +133,18 @@ class MeData(TypedDict):
     player: MePlayer
 
 
+class PublicPick(TypedDict):
+    element: int
+    position: int
+    multiplier: int
+    is_captain: bool
+    is_vice_captain: bool
+
+
+class PublicPicksData(TypedDict):
+    picks: list[PublicPick]
+
+
 @dataclass
 class FPLCache:
     ttl_seconds: int = 300
@@ -344,6 +356,29 @@ def get_fpl_token() -> str | None:
     return os.environ.get("FPL_API_TOKEN")
 
 
+def get_fpl_manager_id() -> int | None:
+    val = os.environ.get("FPL_MANAGER_ID")
+    if not val:
+        return None
+    try:
+        return int(val)
+    except ValueError:
+        raise ValueError(f"FPL_MANAGER_ID must be numeric, got: {val}")
+
+
+async def resolve_manager_id(manager_id: int | None = None) -> int:
+    """Resolve manager ID: param > FPL_MANAGER_ID > FPL_API_TOKEN."""
+    if manager_id:
+        return manager_id
+    env_id = get_fpl_manager_id()
+    if env_id:
+        return env_id
+    token = get_fpl_token()
+    if not token:
+        raise ValueError("Pass manager_id param or set FPL_MANAGER_ID/FPL_API_TOKEN env var")
+    return await fetch_me()
+
+
 async def fetch_me() -> int:
     """Fetch manager ID from /api/me/ endpoint."""
     token = get_fpl_token()
@@ -357,12 +392,44 @@ async def fetch_me() -> int:
         return data["player"]["entry"]
 
 
-async def fetch_my_team(manager_id: int) -> MyTeamData:
-    token = get_fpl_token()
-    if not token:
-        raise ValueError("FPL_API_TOKEN env var not set")
-    url = f"https://fantasy.premierleague.com/api/my-team/{manager_id}/"
+async def fetch_manager_picks(manager_id: int, event: int) -> MyTeamData:
+    """Fetch picks from public endpoint (no auth needed)."""
+    url = f"https://fantasy.premierleague.com/api/entry/{manager_id}/event/{event}/picks/"
     async with httpx.AsyncClient() as client:
-        resp = await client.get(url, headers={"X-API-Authorization": token}, timeout=30)
+        resp = await client.get(url, timeout=30)
         _ = resp.raise_for_status()
-        return cast(MyTeamData, resp.json())
+        data = cast(PublicPicksData, resp.json())
+        # Map to MyTeamData format (transfers/chips empty for public endpoint)
+        picks: list[MyTeamPick] = []
+        for pick in data["picks"]:
+            picks.append({
+                "element": pick["element"],
+                "position": pick["position"],
+                "multiplier": pick["multiplier"],
+                "is_captain": pick["is_captain"],
+                "is_vice_captain": pick["is_vice_captain"],
+                "element_type": 0,  # Not provided by public endpoint
+                "selling_price": 0,
+                "purchase_price": 0,
+            })
+        return {
+            "picks": picks,
+            "picks_last_updated": "",
+            "chips": [],
+            "transfers": {"cost": 0, "status": "", "limit": 0, "made": 0, "bank": 0, "value": 0},
+        }
+
+
+async def fetch_my_team(manager_id: int, current_event: int | None = None) -> MyTeamData:
+    """Fetch team. Uses auth endpoint if token available, else public endpoint."""
+    token = get_fpl_token()
+    if token:
+        url = f"https://fantasy.premierleague.com/api/my-team/{manager_id}/"
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(url, headers={"X-API-Authorization": token}, timeout=30)
+            _ = resp.raise_for_status()
+            return cast(MyTeamData, resp.json())
+    # Fallback to public endpoint
+    if not current_event:
+        raise ValueError("Need current_event for public endpoint (no FPL_API_TOKEN)")
+    return await fetch_manager_picks(manager_id, current_event)
