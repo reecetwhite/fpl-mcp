@@ -1,6 +1,8 @@
-# FPL MCP Server
-
-MCP server for the Fantasy Premier League API. Query players, teams, fixtures, and your FPL team through any MCP-compatible client.
+<div align="center">
+  <h1><code>fpl-mcp</code></h1>
+  <p>MCP server for the Fantasy Premier League API.</p>
+  <p><i>Query players, teams, fixtures, and your FPL team through any MCP-compatible client.</i></p>
+</div>
 
 ## Features
 
