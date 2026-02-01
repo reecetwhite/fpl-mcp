@@ -53,7 +53,10 @@ Add to `~/.claude/mcp_servers.json`:
   "fpl-mcp": {
     "command": "/path/to/fpl-mcp/.venv/bin/python",
     "args": ["-m", "src.server"],
-    "cwd": "/path/to/fpl-mcp"
+    "cwd": "/path/to/fpl-mcp",
+    "env": {
+      "FPL_MANAGER_ID": "123456"
+    }
   }
 }
 ```
@@ -68,7 +71,10 @@ Add to Claude Desktop config:
     "fpl-mcp": {
       "command": "/path/to/fpl-mcp/.venv/bin/python",
       "args": ["-m", "src.server"],
-      "cwd": "/path/to/fpl-mcp"
+      "cwd": "/path/to/fpl-mcp",
+      "env": {
+        "FPL_MANAGER_ID": "123456"
+      }
     }
   }
 }
@@ -84,7 +90,10 @@ Add to `.cursor/mcp.json` in your project or `~/.cursor/mcp.json` globally:
     "fpl-mcp": {
       "command": "/path/to/fpl-mcp/.venv/bin/python",
       "args": ["-m", "src.server"],
-      "cwd": "/path/to/fpl-mcp"
+      "cwd": "/path/to/fpl-mcp",
+      "env": {
+        "FPL_MANAGER_ID": "123456"
+      }
     }
   }
 }
