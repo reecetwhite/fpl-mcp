@@ -1,4 +1,4 @@
-from cache import Element, Fixture, FPLCache, Team
+from cache import Element, Fixture, FPLCache, MyTeamData, Team
 
 
 def format_player(p: Element, cache: FPLCache) -> str:
@@ -93,3 +93,60 @@ def format_fixture(fix: Fixture, cache: FPLCache, team_perspective: int | None =
     if score:
         return f"{gw}: {home_name} {score} {away_name} | {dt}"
     return f"{gw}: {home_name} vs {away_name} | {dt}"
+
+
+def format_my_team(data: MyTeamData, cache: FPLCache) -> str:
+    """Format manager's current team from my-team API response."""
+    lines: list[str] = []
+
+    # Picks
+    picks = data["picks"]
+    if picks:
+        lines.append("## Squad")
+        for pick in picks:
+            player = cache.get_element(pick["element"])
+            if not player:
+                continue
+            name = player["web_name"]
+            pos = cache.get_position_name(player["element_type"])
+            team = cache.get_team(player["team"])
+            team_name = team["short_name"] if team else "???"
+            purchase_price = pick["purchase_price"] / 10
+            selling_price = pick["selling_price"] / 10
+
+            markers = ""
+            if pick["is_captain"]:
+                markers = " (C)"
+            elif pick["is_vice_captain"]:
+                markers = " (VC)"
+
+            lines.append(f"- {name} ({team_name} {pos}) £{purchase_price}m→£{selling_price}m{markers}")
+
+    # Chips
+    chips = data["chips"]
+    if chips:
+        lines.append("\n## Chips")
+        for chip in chips:
+            name = chip["name"]
+            status = chip["status_for_entry"]
+            if status == "available":
+                lines.append(f"- {name}: ✓ available")
+            else:
+                played = chip["played_by_entry"]
+                if played:
+                    lines.append(f"- {name}: used GW{played[0]}")
+                else:
+                    lines.append(f"- {name}: {status}")
+
+    # Transfers
+    transfers = data["transfers"]
+    lines.append("\n## Transfers")
+    bank = transfers["bank"] / 10
+    value = transfers["value"] / 10
+    cost = transfers["cost"]
+    limit = transfers["limit"]
+    made = transfers["made"]
+    lines.append(f"- Bank: £{bank}m | Squad value: £{value}m")
+    lines.append(f"- Made: {made}/{limit} | Cost: {cost}pts")
+
+    return "\n".join(lines)

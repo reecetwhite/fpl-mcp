@@ -1,4 +1,5 @@
 import asyncio
+import os
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import TypedDict, cast
@@ -83,6 +84,53 @@ class BootstrapData(TypedDict):
     elements: list[Element]
     teams: list[Team]
     events: list[Event]
+
+
+class MyTeamPick(TypedDict):
+    element: int
+    position: int
+    multiplier: int
+    is_captain: bool
+    is_vice_captain: bool
+    element_type: int
+    selling_price: int
+    purchase_price: int
+
+
+class MyTeamChip(TypedDict):
+    id: int
+    status_for_entry: str
+    played_by_entry: list[int]
+    name: str
+    number: int
+    start_event: int
+    stop_event: int
+    chip_type: str
+    is_pending: bool
+
+
+class MyTeamTransfers(TypedDict):
+    cost: int
+    status: str
+    limit: int
+    made: int
+    bank: int
+    value: int
+
+
+class MyTeamData(TypedDict):
+    picks: list[MyTeamPick]
+    picks_last_updated: str
+    chips: list[MyTeamChip]
+    transfers: MyTeamTransfers
+
+
+class MePlayer(TypedDict):
+    entry: int
+
+
+class MeData(TypedDict):
+    player: MePlayer
 
 
 @dataclass
@@ -287,3 +335,34 @@ class FPLCache:
     def stats(self) -> tuple[int, int, int]:
         """Return (player_count, team_count, fixture_count)."""
         return len(self._elements_by_id), len(self._teams_by_id), len(self._fixtures)
+
+
+# ── Auth Helpers ────────────────────────────────────────────────────────
+
+
+def get_fpl_token() -> str | None:
+    return os.environ.get("FPL_API_TOKEN")
+
+
+async def fetch_me() -> int:
+    """Fetch manager ID from /api/me/ endpoint."""
+    token = get_fpl_token()
+    if not token:
+        raise ValueError("FPL_API_TOKEN env var not set")
+    url = "https://fantasy.premierleague.com/api/me/"
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(url, headers={"X-API-Authorization": token}, timeout=30)
+        _ = resp.raise_for_status()
+        data = cast(MeData, resp.json())
+        return data["player"]["entry"]
+
+
+async def fetch_my_team(manager_id: int) -> MyTeamData:
+    token = get_fpl_token()
+    if not token:
+        raise ValueError("FPL_API_TOKEN env var not set")
+    url = f"https://fantasy.premierleague.com/api/my-team/{manager_id}/"
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(url, headers={"X-API-Authorization": token}, timeout=30)
+        _ = resp.raise_for_status()
+        return cast(MyTeamData, resp.json())

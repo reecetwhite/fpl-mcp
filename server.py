@@ -2,8 +2,8 @@ from collections.abc import Callable
 
 from fastmcp import FastMCP
 
-from cache import Element, FPLCache
-from formatting import format_fixture, format_player, format_team
+from cache import Element, FPLCache, fetch_me, fetch_my_team
+from formatting import format_fixture, format_my_team, format_player, format_team
 
 mcp = FastMCP("fpl-mcp")
 cache = FPLCache()
@@ -280,6 +280,22 @@ async def get_all_teams() -> str:
     for t in teams_sorted:
         lines.append(format_team(t))
     return "\n".join(lines)
+
+
+# ── Manager Tools ────────────────────────────────────────────────────────
+
+
+@mcp.tool()
+async def get_my_team(manager_id: int | None = None) -> str:
+    """Get manager's current team (requires FPL_API_TOKEN env var).
+
+    Args:
+        manager_id: Manager ID. Defaults to authenticated user's entry.
+    """
+    await cache.ensure_loaded()
+    mid = manager_id or await fetch_me()
+    data = await fetch_my_team(mid)
+    return format_my_team(data, cache)
 
 
 # ── Fixture Tools ────────────────────────────────────────────────────────
