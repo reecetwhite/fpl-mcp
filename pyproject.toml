@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.scripts]
-fpl-mcp = "server:main"
+fpl-mcp = "src.server:main"
 
 [tool.hatch.build.targets.wheel]
-include = ["server.py"]
+packages = ["src"]

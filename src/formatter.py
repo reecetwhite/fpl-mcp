@@ -1,4 +1,4 @@
-from cache import Element, Fixture, FPLCache, MyTeamData, Team
+from .cache import Element, Fixture, FPLCache, MyTeamData, Team
 
 
 def format_player(p: Element, cache: FPLCache) -> str:

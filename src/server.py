@@ -2,8 +2,8 @@ from collections.abc import Callable
 
 from fastmcp import FastMCP
 
-from cache import Element, FPLCache, fetch_me, fetch_my_team
-from formatter import format_fixture, format_my_team, format_player, format_team
+from .cache import Element, FPLCache, fetch_me, fetch_my_team
+from .formatter import format_fixture, format_my_team, format_player, format_team
 
 mcp = FastMCP("fpl-mcp")
 cache = FPLCache()
